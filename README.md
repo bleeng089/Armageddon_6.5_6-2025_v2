@@ -17,7 +17,7 @@ This repository provides a Terraform configuration for deploying a Google Cloud 
 - Support for multiple spokes via the hub's `spoke_configs` variable.
 - Dynamic firewall rules for spoke-to-spoke communication.
 
-# *New Task 3* Implementation 
+## *New Task 3*  
 
 ### *Extended Underlay Architecture*
 - **Public Subnet Extension**: Creates a new public-facing subnet in a different region (`northamerica-northeast1`) from the existing private infrastructure
@@ -61,7 +61,7 @@ This repository provides a Terraform configuration for deploying a Google Cloud 
 
 *Task 3 successfully extends the existing NCC hub-and-spoke architecture while meeting all specified constraints for member-specific deployments, access control, and cross-communication capabilities.*
 
-## Getting Started
+# Getting Started
 1. Configure the hub project in `hub/terraform.tfvars` and deploy Phase 1 (`deploy_phase2 = false`, `deploy_phase3 = false`).
 2. Configure each spoke project in `spoke/terraform.tfvars` and `spoke2/terraform.tfvars` using hub outputs and deploy Phase 1.
 3. Enable Phase 2 (`deploy_phase2 = true`) for both hub and spokes to establish VPN connectivity.
