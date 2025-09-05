@@ -17,6 +17,50 @@ This repository provides a Terraform configuration for deploying a Google Cloud 
 - Support for multiple spokes via the hub's `spoke_configs` variable.
 - Dynamic firewall rules for spoke-to-spoke communication.
 
+# *New Task 3* Implementation 
+
+### *Extended Underlay Architecture*
+- **Public Subnet Extension**: Creates a new public-facing subnet in a different region (`northamerica-northeast1`) from the existing private infrastructure
+- **Windows Jumpbox**: Deploys a Windows Server VM with public RDP access for administrative purposes
+- **Private Infrastructure Utilization**: Leverages existing private subnet (`10.191.1.0/24`) for Linux workloads
+
+### *Member-Specific Linux Environments*
+- **Individualized VMs**: Creates Linux VMs with firewall tags named after each group member
+- **Customized Web Experience**: Each VM features:
+  - *Roboto Mono* font implementation
+  - Resource information positioned in top-left corner
+  - Personalized success statement: *"I, [Member Name], will make $[Salary] per year thanks to Theo and [Influencer]!"*
+  - Custom background and promotional images
+  - Centered promotional material from favorite media
+
+### *Load Balancing & High Availability*
+- **Internal Load Balancer**: Deployed in existing private subnet with dedicated IP
+- **Multi-AZ Deployment**: Linux VMs distributed across multiple availability zones
+- **Health Monitoring**: Automated health checks and instance replacement
+
+### *Secure Access Control*
+- **Tag-Based Firewalling**: Uses GCP firewall tags instead of IP ranges for access control
+- **Windows → Linux Access**: Only Windows VM can access Linux VMs via specific tags
+- **Public RDP Access**: Windows VM accessible via RDP from anywhere
+
+### *Cross-Spoke Connectivity*
+- **Hub-and-Spoke Integration**: Leverages existing NCC architecture for communication
+- **DNS Resolution**: Optional Cloud DNS setup for internal name resolution
+- **Future Expansion**: Designed to support multiple spokes with cross-communication
+
+## *Usage Workflow*
+1. **RDP Connection**: Connect to Windows VM using provided public IP
+2. **Browser Access**: Paste internal load balancer IP into browser
+3. **Load Balancing**: Automatically cycles between member Linux VMs
+4. **Custom Experience**: Each refresh shows different member's customized page
+
+## *Terraform Integration*
+- **Conditional Deployment**: Controlled by `deploy_task_3` boolean variable
+- **Modular Design**: Reusable across all spokes
+- **Output Visibility**: Clear outputs for easy access to IPs and connection strings
+
+*Task 3 successfully extends the existing NCC hub-and-spoke architecture while meeting all specified constraints for member-specific deployments, access control, and cross-communication capabilities.*
+
 ## Getting Started
 1. Configure the hub project in `hub/terraform.tfvars` and deploy Phase 1 (`deploy_phase2 = false`, `deploy_phase3 = false`).
 2. Configure each spoke project in `spoke/terraform.tfvars` and `spoke2/terraform.tfvars` using hub outputs and deploy Phase 1.
@@ -404,15 +448,31 @@ If you destroy Phase 1 resources before Phase 2, Terraform will be unable to pro
 ## Contributing
 Contributions are welcome! Please follow the existing conventions including lowercase naming, separate `variables.tf` and `outputs.tf`, and input validation.
 
-## Changelog
+# Changelog
 
-# v2.0.0
+## v3.0.0
+- **Added Task 3 deployment** for member-specific application scalability
+- **Extended underlay architecture** with public subnet in new region (`northamerica-northeast1`)
+- **Windows Jumpbox VM** with public RDP access and internal load balancer connectivity
+- **Member-specific Linux VMs** with personalized content and firewall tags
+- **Customized web experience** featuring:
+  - Roboto Mono font implementation
+  - Top-left positioned resource information  
+  - Personalized success statements with member names and salaries
+  - Custom background and promotional images
+- **Internal Load Balancer** deployment in existing private subnet
+- **Tag-based firewall rules** for secure access control between Windows and Linux VMs
+- **Conditional deployment** controlled by `deploy_task_3` boolean variable
+- **Enhanced outputs** for easy RDP access and load balancer connectivity
+- **Cross-spoke communication** support through existing hub architecture
+
+## v2.0.0
 - Added Phase 3 deployment for spoke-to-spoke communication
 - Implemented dynamic firewall rules using `all_spoke_cidrs` output
 - Improved dependency management and deployment sequencing
 - Enhanced documentation and destruction workflow
 
-# v1.0.0
+## v1.0.0
 - Initial release with two-phase deployment
 - Basic hub-and-spoke connectivity
-- GCS-based state management and shared secrets
+- GCS-based state management and shared secret
