@@ -10,7 +10,7 @@ terraform {
   backend "gcs" {
     bucket      = "walid-spoke-b-backend"
     prefix      = "spoke-b-state"
-    credentials = "../../../G-secrets/aws-ultramarines-466800-77ac1c30a414.json"
+    credentials = "../../../G-secrets/aws-ultramarines-466800-84014e9e5c33.json"
   }
 }
 
@@ -22,7 +22,7 @@ provider "google" {
 
 # NCC Spoke module 
 module "ncc_spoke" {
-  source                      = "./ncc-spoke-module"
+  source                      = "./modules/ncc-spoke-module"
   prefix                      = var.prefix
   spoke_project_id            = var.spoke_project_id
   spoke_region                = var.spoke_region

@@ -1,8 +1,8 @@
 prefix                      = "walid2"
 spoke_project_id            = "aws-ultramarines-466800"
 spoke_region                = "europe-central2"
-spoke_credentials_path      = "../../../G-secrets/aws-ultramarines-466800-77ac1c30a414.json"
-spoke_subnet_cidr           = "10.191.2.0/24"
+spoke_credentials_path      = "../../../G-secrets/aws-ultramarines-466800-84014e9e5c33.json"
+spoke_subnet_cidr           = "10.191.3.0/24"
 spoke_asn                   = 65002
 spoke_name                  = "spoke-b"
 spoke_statefile_bucket_name = "walid-spoke-b-backend"
