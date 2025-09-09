@@ -60,30 +60,24 @@ module "ncc_spoke" {
 
 module "task3" {
   source = "./modules/task3"
-  # Spoke configuration
-  prefix            = var.prefix
-  spoke_project_id  = var.spoke_project_id
-  spoke_region      = var.spoke_region
-  spoke_name        = var.spoke_name
+  # Shares the same variables/tfvars input as ncc_spoke module
+  prefix           = var.prefix
+  spoke_project_id = var.spoke_project_id
+  spoke_region     = var.spoke_region
+  spoke_name       = var.spoke_name
 
   # Pass the VPC and subnet information from NCC spoke module
   spoke_vpc_id    = module.ncc_spoke.spoke_vpc_id
   spoke_subnet_id = module.ncc_spoke.spoke_subnet_id
 
-  # Task 3 configuration
-  windows_vm_region      = var.windows_vm_region
-  windows_vm_machine_type = var.windows_vm_machine_type
-  linux_vm_machine_type  = var.linux_vm_machine_type
-  task3_public_cidr      = var.task3_public_cidr
+  # Task 3 Overlay: Extends existing underlay with public-facing components
+  task3_private_cidr      = var.task3_private_cidr      # New private CIDR for overlay
+  windows_vm_region       = var.windows_vm_region       # Different region for public overlay
+  windows_vm_machine_type = var.windows_vm_machine_type # Windows jump server (overlay)
+  linux_vm_machine_type   = var.linux_vm_machine_type   # Linux VMs (use existing underlay)
 
-  # Group members
-  group_members = var.group_members
-
-  # Member customizations
-  member_customizations = var.member_customizations
-
-  # Other spokes for cross-communication
-  other_spokes = var.other_spokes
+  # Group member for Linux VM customization
+  group_member = var.group_member
 
   # Task 3 deployment control
   deploy_task_3 = var.deploy_task_3

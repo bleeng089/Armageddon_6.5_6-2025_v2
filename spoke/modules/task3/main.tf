@@ -1,52 +1,60 @@
+terraform {
+  required_providers {
+    google = {
+      source  = "hashicorp/google"
+      version = "~> 6.0"
+    }
+  }
+}
 # Create public subnet for Windows VM in a different region
 resource "google_compute_subnetwork" "task3_public_subnet" {
-  count                  = var.deploy_task_3 ? 1 : 0
-  provider               = google
-  name                   = "${var.prefix}-spoke-${var.spoke_name}-task3-public-subnet"
-  project                = var.spoke_project_id
-  region                 = var.windows_vm_region
-  network                = var.spoke_vpc_id
-  ip_cidr_range          = var.task3_public_cidr
+  count                    = var.deploy_task_3 ? 1 : 0
+  provider                 = google
+  name                     = "${var.prefix}-spoke-${var.spoke_name}-task3-public-subnet"
+  project                  = var.spoke_project_id
+  region                   = var.windows_vm_region
+  network                  = var.spoke_vpc_id
+  ip_cidr_range            = var.task3_private_cidr
   private_ip_google_access = true
 }
 
-# Create router for public subnet
-resource "google_compute_router" "task3_public_router" {
-  count      = var.deploy_task_3 ? 1 : 0
-  provider   = google
-  name       = "${var.prefix}-spoke-${var.spoke_name}-task3-public-router"
-  project    = var.spoke_project_id
-  region     = var.windows_vm_region
-  network    = var.spoke_vpc_id
-}
 
-# Create NAT for public subnet
-resource "google_compute_router_nat" "task3_public_nat" {
+
+# Router for private subnet (Linux VMs need NAT for internet access)
+resource "google_compute_router" "task3_private_router" {
   count    = var.deploy_task_3 ? 1 : 0
   provider = google
-  name     = "${var.prefix}-spoke-${var.spoke_name}-task3-public-nat"
-  router   = var.deploy_task_3 ? google_compute_router.task3_public_router[0].name : null
+  name     = "${var.prefix}-spoke-${var.spoke_name}-task3-private-router"
   project  = var.spoke_project_id
-  region   = var.windows_vm_region
-
-  source_subnetwork_ip_ranges_to_nat = "LIST_OF_SUBNETWORKS"
-  nat_ip_allocate_option             = "MANUAL_ONLY"
-
-  subnetwork {
-    name                    = var.deploy_task_3 ? google_compute_subnetwork.task3_public_subnet[0].id : null
-    source_ip_ranges_to_nat = ["ALL_IP_RANGES"]
-  }
-
-  nat_ips = var.deploy_task_3 ? [google_compute_address.task3_public_nat_ip[0].self_link] : []
+  region   = var.spoke_region
+  network  = var.spoke_vpc_id
 }
 
-# NAT IP address for public subnet
-resource "google_compute_address" "task3_public_nat_ip" {
+# NAT for Linux VMs private subnet 
+resource "google_compute_router_nat" "task3_private_nat" {
+  count                              = var.deploy_task_3 ? 1 : 0
+  provider                           = google
+  name                               = "${var.prefix}-spoke-${var.spoke_name}-task3-linux-nat"
+  router                             = google_compute_router.task3_private_router[0].name
+  project                            = var.spoke_project_id
+  region                             = var.spoke_region
+  source_subnetwork_ip_ranges_to_nat = "LIST_OF_SUBNETWORKS"
+  nat_ip_allocate_option             = "MANUAL_ONLY"
+  nat_ips                            = [google_compute_address.task3_private_nat_ip[0].self_link]
+
+  subnetwork {
+    name                    = var.spoke_subnet_id # Existing private subnet
+    source_ip_ranges_to_nat = ["ALL_IP_RANGES"]
+  }
+}
+
+# NAT IP for private subnet
+resource "google_compute_address" "task3_private_nat_ip" {
   count        = var.deploy_task_3 ? 1 : 0
   provider     = google
-  name         = "${var.prefix}-spoke-${var.spoke_name}-task3-public-nat-ip"
+  name         = "${var.prefix}-spoke-${var.spoke_name}-task3-private-nat-ip"
   project      = var.spoke_project_id
-  region       = var.windows_vm_region
+  region       = var.spoke_region
   address_type = "EXTERNAL"
 }
 
@@ -81,10 +89,11 @@ resource "google_compute_firewall" "task3_windows_to_linux" {
   }
 
   source_tags = ["${var.prefix}-spoke-${var.spoke_name}-task3-windows-vm"]
-  target_tags = [for member in var.group_members : "${var.prefix}-spoke-${var.spoke_name}-task3-${member.name}-linux-vm"]
+  target_tags = ["${var.prefix}-spoke-${var.spoke_name}-task3-${var.group_member}-linux-vm"]
 }
 
 # Windows VM in public subnet
+# Windows VM - NO NAT NEEDED (uses public IP directly)
 resource "google_compute_instance" "task3_windows_vm" {
   count        = var.deploy_task_3 ? 1 : 0
   provider     = google
@@ -101,22 +110,10 @@ resource "google_compute_instance" "task3_windows_vm" {
   }
 
   network_interface {
-    subnetwork = var.deploy_task_3 ? google_compute_subnetwork.task3_public_subnet[0].id : null
+    subnetwork = google_compute_subnetwork.task3_public_subnet[0].id
     access_config {
-      # Ephemeral public IP
+      # Ephemeral public IP - NO NAT NEEDED
     }
-  }
-
-  metadata = {
-    windows-startup-script-ps1 = <<EOF
-      # Add hosts entry for internal load balancer
-      Add-Content -Path "C:\Windows\System32\drivers\etc\hosts" -Value "`n${var.deploy_task_3 ? google_compute_address.task3_internal_lb_ip[0].address : ""} internal-lb.${var.spoke_name}.local"
-      
-      # Add entries for other spokes' internal load balancers
-      ${join("\n", [for spoke in var.other_spokes : 
-        "Add-Content -Path \"C:\\Windows\\System32\\drivers\\etc\\hosts\" -Value \"`n${spoke.lb_ip} internal-lb.${spoke.name}.local\"" 
-      ])}
-    EOF
   }
 }
 
@@ -139,8 +136,8 @@ resource "google_compute_forwarding_rule" "task3_internal_lb" {
   project               = var.spoke_project_id
   region                = var.spoke_region
   load_balancing_scheme = "INTERNAL"
-  backend_service       = var.deploy_task_3 ? google_compute_region_backend_service.task3_linux_backend[0].self_link : null
-  ip_address            = var.deploy_task_3 ? google_compute_address.task3_internal_lb_ip[0].address : null
+  backend_service       = google_compute_region_backend_service.task3_linux_backend[0].self_link
+  ip_address            = google_compute_address.task3_internal_lb_ip[0].address
   ip_protocol           = "TCP"
   ports                 = ["80"]
   subnetwork            = var.spoke_subnet_id
@@ -155,22 +152,26 @@ resource "google_compute_region_backend_service" "task3_linux_backend" {
   region                = var.spoke_region
   protocol              = "TCP"
   load_balancing_scheme = "INTERNAL"
-  health_checks         = var.deploy_task_3 ? [google_compute_health_check.task3_linux_hc[0].id] : []
+  health_checks         = [google_compute_region_health_check.task3_linux_hc[0].id]
 
   backend {
-    group = var.deploy_task_3 ? google_compute_region_instance_group_manager.task3_linux_mig[0].instance_group : null
+    group          = google_compute_region_instance_group_manager.task3_linux_mig[0].instance_group
+    balancing_mode = "CONNECTION"
   }
 }
 
 # Health check for Linux VMs
-resource "google_compute_health_check" "task3_linux_hc" {
+resource "google_compute_region_health_check" "task3_linux_hc" {
   count              = var.deploy_task_3 ? 1 : 0
   provider           = google
   name               = "${var.prefix}-spoke-${var.spoke_name}-task3-linux-hc"
   project            = var.spoke_project_id
   check_interval_sec = 5
   timeout_sec        = 5
-  
+
+  log_config {
+    enable = true
+  }
   tcp_health_check {
     port = 80
   }
@@ -180,10 +181,10 @@ resource "google_compute_health_check" "task3_linux_hc" {
 resource "google_compute_instance_template" "task3_linux_template" {
   count        = var.deploy_task_3 ? 1 : 0
   provider     = google
-  name         = "${var.prefix}-spoke-${var.spoke_name}-task3-linux-template"
+  name_prefix  = "${var.prefix}-spoke-${var.spoke_name}-task3-linux-template-"
   project      = var.spoke_project_id
   machine_type = var.linux_vm_machine_type
-  tags         = [for member in var.group_members : "${var.prefix}-spoke-${var.spoke_name}-task3-${member.name}-linux-vm"]
+  tags         = ["${var.prefix}-spoke-${var.spoke_name}-task3-${var.group_member}-linux-vm"]
 
   disk {
     source_image = "debian-cloud/debian-12"
@@ -194,32 +195,31 @@ resource "google_compute_instance_template" "task3_linux_template" {
     subnetwork = var.spoke_subnet_id
   }
 
-  metadata_startup_script = templatefile("${path.module}/scripts/webserver.sh", {
-    member_customizations = jsonencode(var.member_customizations)
-  })
+  metadata_startup_script = file("${path.module}/scripts/webserver.sh")
+
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 # Managed instance group for Linux VMs
 resource "google_compute_region_instance_group_manager" "task3_linux_mig" {
-  count                = var.deploy_task_3 ? 1 : 0
-  provider             = google
-  name                 = "${var.prefix}-spoke-${var.spoke_name}-task3-linux-mig"
-  project              = var.spoke_project_id
-  region               = var.spoke_region
-  base_instance_name   = "${var.prefix}-spoke-${var.spoke_name}-task3-linux-vm"
-  
+  count              = var.deploy_task_3 ? 1 : 0
+  provider           = google
+  name               = "${var.prefix}-spoke-${var.spoke_name}-task3-linux-mig"
+  project            = var.spoke_project_id
+  region             = var.spoke_region
+  base_instance_name = "${var.prefix}-spoke-${var.spoke_name}-task3-linux-vm"
+  target_size        = 2
+
   version {
-    instance_template = var.deploy_task_3 ? google_compute_instance_template.task3_linux_template[0].id : null
+    instance_template = google_compute_instance_template.task3_linux_template[0].id
   }
 
-  target_size = 2
-
-  distribution_policy {
-    zones = [
-      "${var.spoke_region}-a",
-      "${var.spoke_region}-b"
-    ]
-  }
+  distribution_policy_zones = [
+    "${var.spoke_region}-a",
+    "${var.spoke_region}-b"
+  ]
 
   named_port {
     name = "http"
@@ -227,27 +227,3 @@ resource "google_compute_region_instance_group_manager" "task3_linux_mig" {
   }
 }
 
-# Individual Linux VMs for each member
-resource "google_compute_instance" "task3_linux_vms" {
-  for_each     = var.deploy_task_3 ? { for idx, member in var.group_members : member.name => member } : {}
-  provider     = google
-  name         = "${var.prefix}-spoke-${var.spoke_name}-task3-${each.value.name}-linux-vm"
-  project      = var.spoke_project_id
-  zone         = "${var.spoke_region}-a"
-  machine_type = var.linux_vm_machine_type
-  tags         = ["${var.prefix}-spoke-${var.spoke_name}-task3-${each.value.name}-linux-vm"]
-
-  boot_disk {
-    initialize_params {
-      image = "debian-cloud/debian-12"
-    }
-  }
-
-  network_interface {
-    subnetwork = var.spoke_subnet_id
-  }
-
-  metadata_startup_script = templatefile("${path.module}/scripts/webserver.sh", {
-    member_customizations = jsonencode([var.member_customizations[index(var.group_members, each.value)]])
-  })
-}

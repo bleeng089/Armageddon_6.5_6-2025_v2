@@ -1,4 +1,4 @@
-# Spoke configuration
+
 variable "prefix" {
   description = "Prefix for resource names"
   type        = string
@@ -19,7 +19,6 @@ variable "spoke_name" {
   type        = string
 }
 
-# VPC and subnet references
 variable "spoke_vpc_id" {
   description = "ID of the existing spoke VPC"
   type        = string
@@ -30,16 +29,15 @@ variable "spoke_subnet_id" {
   type        = string
 }
 
-# Task 3 configuration
+
 variable "windows_vm_region" {
-  description = "Region for the Windows VM (different from spoke region)"
+  description = "Region for the Windows VM"
   type        = string
 }
 
 variable "windows_vm_machine_type" {
   description = "Machine type for Windows VM"
   type        = string
-  default     = "n4-standard-4"
 }
 
 variable "linux_vm_machine_type" {
@@ -48,44 +46,17 @@ variable "linux_vm_machine_type" {
   default     = "e2-medium"
 }
 
-variable "task3_public_cidr" {
-  description = "CIDR for Task 3 public subnet"
+variable "task3_private_cidr" {
+  description = "CIDR for Task 3 private subnet"
   type        = string
   default     = "10.192.1.0/24"
 }
 
-# Group members configuration
-variable "group_members" {
-  description = "List of group members with their regions"
-  type = list(object({
-    name   = string
-    region = string
-  }))
+variable "group_member" {
+  description = "Group member"
+  type        = string
 }
 
-# Member customization
-variable "member_customizations" {
-  description = "Customization details for each member's Linux VM"
-  type = list(object({
-    name               = string
-    annual_salary      = string
-    influencer         = string
-    background_image_url = string
-    promo_image_url    = string
-  }))
-}
-
-# Other spokes configuration for cross-spoke communication
-variable "other_spokes" {
-  description = "List of other spokes for cross-communication"
-  type = list(object({
-    name  = string
-    lb_ip = string
-  }))
-  default = []
-}
-
-# Task 3 deployment control
 variable "deploy_task_3" {
   description = "Whether to deploy Task 3 resources"
   type        = bool
