@@ -24,7 +24,6 @@ test_vm_image        = "debian-cloud/debian-11"
 deploy_phase2 = false
 deploy_phase3 = false
 
-
 #############################
 ####### TASK 3 CONFIG #######
 #############################
@@ -40,6 +39,3 @@ task3_private_cidr      = "10.192.1.0/24"
 
 # Group member for Task 3
 group_member = "walid"
-
-
-

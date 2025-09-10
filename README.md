@@ -385,7 +385,13 @@ JSON key files for hub and spoke projects.
 | linux_vm_machine_type | Machine type for Linux VMs | string | "e2-medium" | No |
 | task3_private_cidr | CIDR for Task 3 private subnet | string | "10.192.1.0/24" | No |
 | group_member | Group member for Linux VM customization | string | "walid" | No |
-
+### Spoke to Spoke Communication
+![Screenshot](pics/task1_1.png)
+### Task 3 in Action
+![Screenshot](pics/task3_1.png)
+![Screenshot](pics/task3_2.png)
+![Screenshot](pics/task3_3.png)
+![Screenshot](pics/task3_4.png)
 ## Destruction Workflow
 
 To safely delete the infrastructure:
@@ -457,7 +463,7 @@ Contributions are welcome! Please follow the existing conventions including lowe
 
 ## v3.0.0
 - **Added Task 3 deployment** for member-specific application scalability
-- **Extended underlay architecture** with public subnet in new region
+- **Extended underlay architecture** with public subnet
 - **Windows Jumpbox VM** with public RDP access and internal load balancer connectivity
 - **Member-specific Linux VMs** with personalized content and firewall tags
 - **Customized web experience** with personalized styling and content

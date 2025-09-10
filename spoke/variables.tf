@@ -209,7 +209,7 @@ variable "linux_vm_machine_type" {
 variable "task3_private_cidr" {
   description = "CIDR for Task 3 private subnet"
   type        = string
-  default     = "10.192.2.0/24"
+  default     = "10.192.1.0/24"
 }
 
 
