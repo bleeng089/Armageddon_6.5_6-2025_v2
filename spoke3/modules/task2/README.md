@@ -234,4 +234,4 @@ cd spoke
 terraform apply -var="deploy_task_2=false"
 ```
 
-This architecture represents a **practical compromise** between Terraform's state management and Cloud Run's operational realities! 🎯
+This architecture represents a **practical compromise** between Terraform's state management and Cloud Run's operational realities.
